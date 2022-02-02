@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import glob
 import json
+import sys
 from dataclasses import dataclass
 from typing import Optional
 
@@ -64,10 +65,69 @@ def parse_note(s):
         return TextNote(**n)
 
 
-for fname in glob.glob('Takeout/Keep/*.json'):
+@dataclass
+class ObsidianNote:
+    path: str
+    metadata: dict
+    content: str
+
+
+def title_to_slug(s: str) -> str:
+    # pretty much anything goes
+    return s.replace('/', '_')
+
+
+def listnote_to_obsidian(note: ListNote) -> ObsidianNote:
+    # TODO: tags as folders
+    path = f'{title_to_slug(note.title)}.md'
+    metadata = {
+        'x-keep-color': note.color,
+        'x-keep-archived': note.archived,
+        'x-keep-pinned': note.pinned,
+        'x-keep-trashed': note.trashed,
+        'x-keep-labels': note.labels or [],
+    }
+    lines = []
+    # TODO: list objects?
+    for item in note.list_content:
+        check = 'x' if item['isChecked'] else ' '
+        lines.append(f'- [{check}] {item["text"]}')
+    return ObsidianNote(
+        path=path,
+        metadata=metadata,
+        content='\n'.join(lines)
+    )
+
+
+def serialise_metadata(m: dict) -> str:
+    # TODO: use PyYAML?
+    lines = []
+    for k, v in m.items():
+        lines.append(f'{k}: {v}')
+    return '---\n' + '\n'.join(lines) + '\n---\n'
+
+
+def obsidiannote_to_markdown(note: ObsidianNote) -> str:
+    # XXX: busted with unindented formatted values
+    # md = textwrap.dedent("""
+    # ---
+    # {serialise_metadata(note.metadata)}
+    # ---
+    #
+    # {note.content}
+    # """)
+    md = serialise_metadata(note.metadata) + '\n' + note.content
+    return md
+
+
+try:
+    files = [sys.argv[1]]
+except IndexError:
+    files = glob.glob('Takeout/Keep/*.json')
+
+for fname in files:
     with open(fname, 'r') as f:
-        try:
-            n = parse_note(f.read())
-        except TypeError as ex:
-            n = str(ex)
-        print(fname, n)
+        n = parse_note(f.read())
+        if isinstance(n, ListNote):
+            print(obsidiannote_to_markdown(listnote_to_obsidian(n)))
+            break
