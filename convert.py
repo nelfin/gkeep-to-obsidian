@@ -8,7 +8,7 @@ import sys
 from dataclasses import dataclass
 from os import PathLike
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 DEFAULT_NAMES = [
     ('textContent', 'text_content'),
@@ -53,6 +53,9 @@ class TextNote(Note):
     attachments: Optional[list] = None
 
 
+KeepNote = Union[ListNote, TextNote]
+
+
 def _rename_fields(d, mapping):
     for from_, to in mapping:
         if from_ in d:
@@ -61,7 +64,7 @@ def _rename_fields(d, mapping):
     return d
 
 
-def parse_note(s):
+def parse_note(s) -> Optional[KeepNote]:
     n = json.loads(s)
     n = _rename_fields(n, DEFAULT_NAMES)
     if 'list_content' in n:
@@ -82,7 +85,7 @@ def title_to_slug(s: str) -> str:
     return s.replace('/', '_')
 
 
-def keepnote_metadata(note):
+def keepnote_metadata(note: KeepNote) -> dict:
     return {
         'x-keep-color': note.color,
         'x-keep-archived': note.archived,
@@ -131,15 +134,23 @@ def obsidiannote_to_markdown(note: ObsidianNote) -> tuple[PathLike, bytes]:
     return Path(note.path), md.encode('utf-8')
 
 
-try:
-    files = [sys.argv[1]]
-except IndexError:
-    files = glob.glob('Takeout/Keep/*.json')
+if __name__ == '__main__':
+    try:
+        files = [sys.argv[1]]
+    except IndexError:
+        files = glob.glob('Takeout/Keep/*.json')
 
-for fname in files:
-    with open(fname, 'r') as f:
-        n = parse_note(f.read())
-        if isinstance(n, ListNote):
-            print(obsidiannote_to_markdown(listnote_to_obsidian(n)))
-        elif isinstance(n, TextNote):
-            print(obsidiannote_to_markdown(textnote_to_obsidian(n)))
+    def iter_notes():
+        for fname in files:
+            with open(fname, 'r') as f:
+                n = parse_note(f.read())
+            if isinstance(n, ListNote):
+                onote = listnote_to_obsidian(n)
+            elif isinstance(n, TextNote):
+                onote = textnote_to_obsidian(n)
+            else:
+                continue
+            yield obsidiannote_to_markdown(onote)
+
+    for path, contents in iter_notes():
+        print(path, contents)
