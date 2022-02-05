@@ -66,6 +66,7 @@ def _rename_fields(d, mapping):
 
 
 def parse_note(s) -> Optional[KeepNote]:
+    # TODO: subparsers for annotations and attachments?
     try:
         n = json.loads(s)
     except json.JSONDecodeError:
@@ -102,6 +103,14 @@ def keepnote_metadata(note: KeepNote) -> dict:
     }
 
 
+def serialise_annotations(annotations) -> str:
+    content = '\n\n§ Annotations:\n'
+    for item in annotations:
+        # FIXME: check non-WEBLINK? annotations don't seem to be referenced in the Keep API
+        content += f"- {item['title']}: [{item['description']}]({item['url']})\n"
+    return content
+
+
 def keepnote_to_obsidian(
     n: KeepNote,
     labels_as_folders=True,
@@ -109,6 +118,7 @@ def keepnote_to_obsidian(
     tag_pinned=True,
     archive_dir=None,
     trashed_dir=None,
+    annotations=False,
     **kwargs
 ) -> ObsidianNote:
     assert isinstance(n, (ListNote, TextNote))  # FIXME: remove?
@@ -137,6 +147,8 @@ def keepnote_to_obsidian(
         content = '\n'.join(lines)
     else:  # isinstance(n, TextNote):
         content = n.text_content
+    if annotations and n.annotations:
+        content += serialise_annotations(n.annotations)
     return ObsidianNote(
         path=path,
         metadata=metadata,
@@ -205,6 +217,8 @@ if __name__ == '__main__':
     )
     parser.add_argument('--destdir', default='out', type=Path,
                         help='destination directory for converted files')
+    parser.add_argument('--annotations', action='store_true',
+                        help='add link preview annotations included in notes')
     parser.add_argument('--archived', action='store_true', help='convert archived notes')
     parser.add_argument('--archive-dir', dest='archive_dir', default='Archived',
                         help='subdirectory for archived notes')
