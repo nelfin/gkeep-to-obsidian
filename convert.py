@@ -83,6 +83,7 @@ def parse_note(s) -> Optional[KeepNote]:
 class ObsidianNote:
     path: PathLike
     metadata: dict
+    tags: list[str]
     content: str
 
 
@@ -101,7 +102,13 @@ def keepnote_metadata(note: KeepNote) -> dict:
     }
 
 
-def keepnote_to_obsidian(n: KeepNote, labels_as_folders=True, **kwargs) -> ObsidianNote:
+def keepnote_to_obsidian(
+    n: KeepNote,
+    labels_as_folders=True,
+    labels_as_tags=False,
+    tag_pinned=True,
+    **kwargs
+) -> ObsidianNote:
     assert isinstance(n, (ListNote, TextNote))  # FIXME: remove?
     if not n.title:
         slug = n.ctime_us
@@ -111,6 +118,11 @@ def keepnote_to_obsidian(n: KeepNote, labels_as_folders=True, **kwargs) -> Obsid
     if labels_as_folders and n.labels:
         path = n.labels[0] / path
     metadata = keepnote_metadata(n)
+    tags = []
+    if labels_as_tags and n.labels:
+        tags.extend(n.labels)
+    if tag_pinned and n.pinned:
+        tags.append('pinned')
     if isinstance(n, ListNote):
         lines = []
         for item in n.list_content:
@@ -122,6 +134,7 @@ def keepnote_to_obsidian(n: KeepNote, labels_as_folders=True, **kwargs) -> Obsid
     return ObsidianNote(
         path=path,
         metadata=metadata,
+        tags=tags,
         content=content,
     )
 
@@ -141,8 +154,6 @@ def serialise_tags(tags: list[str]) -> str:
 def obsidiannote_to_markdown(
     note: ObsidianNote,
     add_metadata=True,
-    labels_as_tags=False,
-    tag_pinned=True,
     **kwargs
 ) -> tuple[PathLike, bytes]:
     if add_metadata:
@@ -150,13 +161,8 @@ def obsidiannote_to_markdown(
     else:
         md = ''
     md += note.content + '\n'
-    if labels_as_tags:
-        # TODO: add to object?
-        labels = note.metadata['x-keep-labels']
-        if labels:
-            md += '\n' + serialise_tags(labels) + '\n'
-    if tag_pinned and note.metadata['x-keep-pinned']:
-        md += '\n#pinned\n'
+    if note.tags:
+        md += '\n' + serialise_tags(note.tags) + '\n'
     return note.path, md.encode('utf-8')
 
 
