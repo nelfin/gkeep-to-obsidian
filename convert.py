@@ -199,6 +199,8 @@ if __name__ == '__main__':
     )
     parser.add_argument('--destdir', default='out', type=Path,
                         help='destination directory for converted files')
+    parser.add_argument('--archived', action='store_true', help='convert archived notes')
+    parser.add_argument('--trashed', action='store_true', help='convert trashed notes')
     parser.add_argument('--no-metadata', action='store_false', dest='add_metadata')
     parser.add_argument('--labels-as-tags', action='store_true', dest='labels_as_tags')
     parser.add_argument('--no-labels-as-folders', action='store_false', dest='labels_as_folders')
@@ -216,6 +218,10 @@ if __name__ == '__main__':
             with open(fname, 'r') as f:
                 n = parse_note(f.read())
             if n is None:
+                continue
+            if n.archived and not args.archived:
+                continue
+            if n.trashed and not args.trashed:
                 continue
             o_note = keepnote_to_obsidian(n, **vars(args))
             yield obsidiannote_to_markdown(o_note, **vars(args))
