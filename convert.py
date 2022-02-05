@@ -238,5 +238,5 @@ if __name__ == '__main__':
 
     for path, contents in iter_notes():
         f = args.destdir / path  # type: Path
-        f.parent.mkdir(exist_ok=True)
+        f.parent.mkdir(parents=True, exist_ok=True)
         f.write_bytes(contents)
