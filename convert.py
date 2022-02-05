@@ -28,16 +28,10 @@ class Note:
     color: str
     mtime_us: int  # TODO: us -> s/ns?
     ctime_us: int
-    # TODO: should these be types?
     archived: bool
     pinned: bool
     trashed: bool
 
-# @dataclass
-# class NoteOptions:
-#     labels: Optional[list] = None
-#     annotations: Optional[list] = None
-#     attachments: Optional[list] = None
 
 @dataclass
 class ListNote(Note):
@@ -45,6 +39,7 @@ class ListNote(Note):
     labels: Optional[list] = None
     annotations: Optional[list] = None
     attachments: Optional[list] = None
+
 
 @dataclass
 class TextNote(Note):
@@ -55,6 +50,14 @@ class TextNote(Note):
 
 
 KeepNote = Union[ListNote, TextNote]
+
+
+@dataclass
+class ObsidianNote:
+    path: PathLike
+    metadata: dict
+    tags: list[str]
+    content: str
 
 
 def _rename_fields(d, mapping):
@@ -78,14 +81,6 @@ def parse_note(s) -> Optional[KeepNote]:
         return ListNote(**n)
     elif 'text_content' in n:
         return TextNote(**n)
-
-
-@dataclass
-class ObsidianNote:
-    path: PathLike
-    metadata: dict
-    tags: list[str]
-    content: str
 
 
 def title_to_slug(s: str) -> str:
@@ -242,7 +237,6 @@ if __name__ == '__main__':
     if files is None:
         parser.error(f'unable to open {args.infile} for processing')
         # FIXME: optional? instead just raise?
-    # TODO: default? files = glob.glob('Takeout/Keep/*.json')
 
     def iter_notes():
         for fname in files:
