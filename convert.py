@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import glob
+import argparse
 import json
-import sys
 from dataclasses import dataclass
 from os import PathLike
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Iterator
 
 DEFAULT_NAMES = [
     ('textContent', 'text_content'),
@@ -136,11 +135,32 @@ def obsidiannote_to_markdown(note: ObsidianNote) -> tuple[PathLike, bytes]:
     return Path(note.path), md.encode('utf-8')
 
 
+def iter_filenames(filespec: str, recursive=True) -> Optional[Iterator[PathLike]]:
+    p = Path(filespec)
+    if p.is_dir():
+        if recursive:
+            return p.rglob('*.json')
+        else:
+            return p.glob('*.json')
+    elif p.is_file():
+        return iter([p])
+    # TODO: .tgz
+
+
+
 if __name__ == '__main__':
-    try:
-        files = [sys.argv[1]]
-    except IndexError:
-        files = glob.glob('Takeout/Keep/*.json')
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'infile',
+        help='file(s) to convert: single JSON file, .tgz archive, or extracted directory',
+    )
+    args = parser.parse_args()
+
+    files = iter_filenames(args.infile)
+    if files is None:
+        parser.error(f'unable to open {args.infile} for processing')
+        # FIXME: optional? instead just raise?
+    # TODO: default? files = glob.glob('Takeout/Keep/*.json')
 
     def iter_notes():
         for fname in files:
@@ -149,7 +169,6 @@ if __name__ == '__main__':
             if n is None:
                 continue
             yield obsidiannote_to_markdown(keepnote_to_obsidian(n))
-
 
     for path, contents in iter_notes():
         print(path, contents)
