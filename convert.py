@@ -131,7 +131,7 @@ def serialise_metadata(m: dict) -> str:
 
 
 def obsidiannote_to_markdown(note: ObsidianNote) -> tuple[PathLike, bytes]:
-    md = serialise_metadata(note.metadata) + '\n' + note.content
+    md = serialise_metadata(note.metadata) + '\n' + note.content + '\n'
     return Path(note.path), md.encode('utf-8')
 
 
