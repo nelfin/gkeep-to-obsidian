@@ -89,12 +89,13 @@ def title_to_slug(s: str) -> str:
 
 
 def keepnote_metadata(note: KeepNote) -> dict:
+    labels = note.labels or []
     return {
         'x-keep-color': note.color,
         'x-keep-archived': note.archived,
         'x-keep-pinned': note.pinned,
         'x-keep-trashed': note.trashed,
-        'x-keep-labels': note.labels or [],
+        'x-keep-labels': [label['name'] for label in labels],
     }
 
 
