@@ -132,12 +132,21 @@ def serialise_metadata(m: dict) -> str:
     return '---\n' + '\n'.join(lines) + '\n---\n'
 
 
-def obsidiannote_to_markdown(note: ObsidianNote, add_metadata=True, **kwargs) -> tuple[PathLike, bytes]:
+def serialise_tags(tags: list[str]) -> str:
+    return '\n'.join('#'+tag for tag in tags)
+
+
+def obsidiannote_to_markdown(note: ObsidianNote, add_metadata=True, labels_as_tags=False, **kwargs) -> tuple[PathLike, bytes]:
     if add_metadata:
         md = serialise_metadata(note.metadata) + '\n'
     else:
         md = ''
     md += note.content + '\n'
+    if labels_as_tags:
+        # TODO: add to object?
+        labels = note.metadata['x-keep-labels']
+        if labels:
+            md += '\n' + serialise_tags(labels) + '\n'
     return Path(note.path), md.encode('utf-8')
 
 
@@ -175,6 +184,7 @@ if __name__ == '__main__':
     parser.add_argument('--destdir', default='out', type=Path,
                         help='destination directory for converted files')
     parser.add_argument('--no-metadata', action='store_false', dest='add_metadata')
+    parser.add_argument('--labels-as-tags', action='store_true', dest='labels_as_tags')
     args = parser.parse_args()
 
     files = iter_filenames(args.infile)
