@@ -107,6 +107,8 @@ def keepnote_to_obsidian(
     labels_as_folders=True,
     labels_as_tags=False,
     tag_pinned=True,
+    archive_dir=None,
+    trashed_dir=None,
     **kwargs
 ) -> ObsidianNote:
     assert isinstance(n, (ListNote, TextNote))  # FIXME: remove?
@@ -117,6 +119,10 @@ def keepnote_to_obsidian(
     path = Path(f'{slug}.md')
     if labels_as_folders and n.labels:
         path = n.labels[0] / path
+    if n.archived and archive_dir:
+        path = archive_dir / path
+    elif n.trashed and trashed_dir:  # can a note be trashed and archived?
+        path = trashed_dir / path
     metadata = keepnote_metadata(n)
     tags = []
     if labels_as_tags and n.labels:
@@ -200,7 +206,11 @@ if __name__ == '__main__':
     parser.add_argument('--destdir', default='out', type=Path,
                         help='destination directory for converted files')
     parser.add_argument('--archived', action='store_true', help='convert archived notes')
+    parser.add_argument('--archive-dir', dest='archive_dir', default='Archived',
+                        help='subdirectory for archived notes')
     parser.add_argument('--trashed', action='store_true', help='convert trashed notes')
+    parser.add_argument('--trashed-dir', dest='trashed_dir', default='Trashed',
+                        help='subdirectory for trashed notes')
     parser.add_argument('--no-metadata', action='store_false', dest='add_metadata')
     parser.add_argument('--labels-as-tags', action='store_true', dest='labels_as_tags')
     parser.add_argument('--no-labels-as-folders', action='store_false', dest='labels_as_folders')
