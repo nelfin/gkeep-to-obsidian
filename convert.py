@@ -98,29 +98,23 @@ def keepnote_metadata(note: KeepNote) -> dict:
     }
 
 
-def listnote_to_obsidian(note: ListNote) -> ObsidianNote:
+def keepnote_to_obsidian(n: KeepNote) -> ObsidianNote:
+    assert isinstance(n, (ListNote, TextNote))  # FIXME: remove?
     # TODO: tags as folders
-    path = f'{title_to_slug(note.title)}.md'
-    metadata = keepnote_metadata(note)
-    lines = []
-    # TODO: list objects?
-    for item in note.list_content:
-        check = 'x' if item['isChecked'] else ' '
-        lines.append(f'- [{check}] {item["text"]}')
+    path = f'{title_to_slug(n.title)}.md'
+    metadata = keepnote_metadata(n)
+    if isinstance(n, ListNote):
+        lines = []
+        for item in n.list_content:
+            check = 'x' if item['isChecked'] else ' '
+            lines.append(f'- [{check}] {item["text"]}')
+        content = '\n'.join(lines)
+    else:  # isinstance(n, TextNote):
+        content = n.text_content
     return ObsidianNote(
         path=path,
         metadata=metadata,
-        content='\n'.join(lines),
-    )
-
-
-def textnote_to_obsidian(note: TextNote) -> ObsidianNote:
-    path = f'{title_to_slug(note.title)}.md'
-    metadata = keepnote_metadata(note)
-    return ObsidianNote(
-        path=path,
-        metadata=metadata,
-        content=note.text_content,
+        content=content,
     )
 
 
@@ -147,13 +141,10 @@ if __name__ == '__main__':
         for fname in files:
             with open(fname, 'r') as f:
                 n = parse_note(f.read())
-            if isinstance(n, ListNote):
-                onote = listnote_to_obsidian(n)
-            elif isinstance(n, TextNote):
-                onote = textnote_to_obsidian(n)
-            else:
+            if n is None:
                 continue
-            yield obsidiannote_to_markdown(onote)
+            yield obsidiannote_to_markdown(keepnote_to_obsidian(n))
+
 
     for path, contents in iter_notes():
         print(path, contents)
