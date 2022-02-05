@@ -142,7 +142,7 @@ def iter_filenames(filespec: str, recursive=True) -> Optional[Iterator[PathLike]
             return p.rglob('*.json')
         else:
             return p.glob('*.json')
-    elif p.is_file():
+    elif p.exists():
         return iter([p])
     # TODO: .tgz
 
