@@ -1,8 +1,13 @@
 #!/usr/bin/env python
+
+from __future__ import annotations
+
 import glob
 import json
 import sys
 from dataclasses import dataclass
+from os import PathLike
+from pathlib import Path
 from typing import Optional
 
 DEFAULT_NAMES = [
@@ -121,17 +126,9 @@ def serialise_metadata(m: dict) -> str:
     return '---\n' + '\n'.join(lines) + '\n---\n'
 
 
-def obsidiannote_to_markdown(note: ObsidianNote) -> str:
-    # XXX: busted with unindented formatted values
-    # md = textwrap.dedent("""
-    # ---
-    # {serialise_metadata(note.metadata)}
-    # ---
-    #
-    # {note.content}
-    # """)
+def obsidiannote_to_markdown(note: ObsidianNote) -> tuple[PathLike, bytes]:
     md = serialise_metadata(note.metadata) + '\n' + note.content
-    return md
+    return Path(note.path), md.encode('utf-8')
 
 
 try:
