@@ -147,13 +147,13 @@ def iter_filenames(filespec: str, recursive=True) -> Optional[Iterator[PathLike]
     # TODO: .tgz
 
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        'infile',
-        help='file(s) to convert: single JSON file, .tgz archive, or extracted directory',
+    parser.add_argument('infile', help=('file(s) to convert: single JSON file, .tgz archive, '
+                                        'or extracted directory'),
     )
+    parser.add_argument('--destdir', default='out', type=Path,
+                        help='destination directory for converted files')
     args = parser.parse_args()
 
     files = iter_filenames(args.infile)
@@ -171,4 +171,6 @@ if __name__ == '__main__':
             yield obsidiannote_to_markdown(keepnote_to_obsidian(n))
 
     for path, contents in iter_notes():
-        print(path, contents)
+        f = args.destdir / path  # type: Path
+        f.parent.mkdir(exist_ok=True)
+        f.write_bytes(contents)
