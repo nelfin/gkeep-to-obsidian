@@ -169,6 +169,13 @@ def serialise_tags(tags: list[str]) -> str:
     return '\n'.join('#'+tag for tag in tags)
 
 
+def fix_trailing_newline(s: str) -> str:
+    if not s.endswith('\n'):
+        return s + '\n'
+    else:
+        return s
+
+
 def obsidiannote_to_markdown(
     note: ObsidianNote,
     add_metadata=True,
@@ -178,7 +185,7 @@ def obsidiannote_to_markdown(
         md = serialise_metadata(note.metadata) + '\n'
     else:
         md = ''
-    md += note.content + '\n'
+    md += fix_trailing_newline(note.content)
     if note.tags:
         md += '\n' + serialise_tags(note.tags) + '\n'
     return note.path, md.encode('utf-8')
