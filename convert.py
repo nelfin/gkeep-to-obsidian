@@ -65,7 +65,10 @@ def _rename_fields(d, mapping):
 
 
 def parse_note(s) -> Optional[KeepNote]:
-    n = json.loads(s)
+    try:
+        n = json.loads(s)
+    except json.JSONDecodeError:
+        return None
     n = _rename_fields(n, DEFAULT_NAMES)
     if 'list_content' in n:
         return ListNote(**n)
