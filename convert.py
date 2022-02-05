@@ -77,16 +77,20 @@ def title_to_slug(s: str) -> str:
     return s.replace('/', '_')
 
 
-def listnote_to_obsidian(note: ListNote) -> ObsidianNote:
-    # TODO: tags as folders
-    path = f'{title_to_slug(note.title)}.md'
-    metadata = {
+def keepnote_metadata(note):
+    return {
         'x-keep-color': note.color,
         'x-keep-archived': note.archived,
         'x-keep-pinned': note.pinned,
         'x-keep-trashed': note.trashed,
         'x-keep-labels': note.labels or [],
     }
+
+
+def listnote_to_obsidian(note: ListNote) -> ObsidianNote:
+    # TODO: tags as folders
+    path = f'{title_to_slug(note.title)}.md'
+    metadata = keepnote_metadata(note)
     lines = []
     # TODO: list objects?
     for item in note.list_content:
@@ -95,7 +99,17 @@ def listnote_to_obsidian(note: ListNote) -> ObsidianNote:
     return ObsidianNote(
         path=path,
         metadata=metadata,
-        content='\n'.join(lines)
+        content='\n'.join(lines),
+    )
+
+
+def textnote_to_obsidian(note: TextNote) -> ObsidianNote:
+    path = f'{title_to_slug(note.title)}.md'
+    metadata = keepnote_metadata(note)
+    return ObsidianNote(
+        path=path,
+        metadata=metadata,
+        content=note.text_content,
     )
 
 
@@ -130,4 +144,5 @@ for fname in files:
         n = parse_note(f.read())
         if isinstance(n, ListNote):
             print(obsidiannote_to_markdown(listnote_to_obsidian(n)))
-            break
+        elif isinstance(n, TextNote):
+            print(obsidiannote_to_markdown(textnote_to_obsidian(n)))
