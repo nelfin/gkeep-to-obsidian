@@ -101,7 +101,11 @@ def keepnote_metadata(note: KeepNote) -> dict:
 def keepnote_to_obsidian(n: KeepNote) -> ObsidianNote:
     assert isinstance(n, (ListNote, TextNote))  # FIXME: remove?
     # TODO: tags as folders
-    path = f'{title_to_slug(n.title)}.md'
+    if not n.title:
+        slug = n.ctime_us
+    else:
+        slug = title_to_slug(n.title)
+    path = f'{slug}.md'
     metadata = keepnote_metadata(n)
     if isinstance(n, ListNote):
         lines = []
