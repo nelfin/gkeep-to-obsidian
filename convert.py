@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import tarfile
+import zipfile
 from dataclasses import dataclass
 from os import PathLike
 from pathlib import Path
@@ -135,6 +137,18 @@ def obsidiannote_to_markdown(note: ObsidianNote) -> tuple[PathLike, bytes]:
     return Path(note.path), md.encode('utf-8')
 
 
+def archive(p: PathLike) -> Optional[tarfile.TarFile, zipfile.ZipFile]:
+    try:
+        return zipfile.ZipFile(p)
+    except (FileNotFoundError, zipfile.BadZipfile):
+        pass
+    try:
+        return tarfile.open(p)
+    except (FileNotFoundError, tarfile.TarError) as ex:
+        pass
+    return None
+
+
 def iter_filenames(filespec: str, recursive=True) -> Optional[Iterator[PathLike]]:
     p = Path(filespec)
     if p.is_dir():
@@ -143,8 +157,10 @@ def iter_filenames(filespec: str, recursive=True) -> Optional[Iterator[PathLike]
         else:
             return p.glob('*.json')
     elif p.exists():
+        zip = archive(p)
+        if zip is not None:
+            raise NotImplementedError('need a better interface for temporary extraction')
         return iter([p])
-    # TODO: .tgz
 
 
 if __name__ == '__main__':
