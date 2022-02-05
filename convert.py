@@ -215,22 +215,25 @@ def iter_filenames(filespec: str, recursive=True) -> Optional[Iterator[PathLike]
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('infile', help=('file(s) to convert: single JSON file, .tgz archive, '
-                                        'or extracted directory'),
-    )
-    parser.add_argument('--destdir', default='out', type=Path,
-                        help='destination directory for converted files')
+                                        'or extracted directory'))
+    parser.add_argument('--destdir', default='out', type=Path, metavar='DIR',
+                        help='destination directory for converted files [default=out]')
     parser.add_argument('--annotations', action='store_true',
                         help='add link preview annotations included in notes')
     parser.add_argument('--archived', action='store_true', help='convert archived notes')
-    parser.add_argument('--archive-dir', dest='archive_dir', default='Archived',
+    parser.add_argument('--archive-dir', dest='archive_dir', default='Archived', metavar='DIR',
                         help='subdirectory for archived notes')
     parser.add_argument('--trashed', action='store_true', help='convert trashed notes')
-    parser.add_argument('--trashed-dir', dest='trashed_dir', default='Trashed',
+    parser.add_argument('--trashed-dir', dest='trashed_dir', default='Trashed', metavar='DIR',
                         help='subdirectory for trashed notes')
-    parser.add_argument('--no-metadata', action='store_false', dest='add_metadata')
-    parser.add_argument('--labels-as-tags', action='store_true', dest='labels_as_tags')
-    parser.add_argument('--no-labels-as-folders', action='store_false', dest='labels_as_folders')
-    parser.add_argument('--no-tag-pinned', action='store_false', dest='tag_pinned')
+    parser.add_argument('--no-metadata', action='store_false', dest='add_metadata',
+                        help="don't add a YAML metadata block at file top")
+    parser.add_argument('--labels-as-tags', action='store_true', dest='labels_as_tags',
+                        help='add tags for each note label at the end')
+    parser.add_argument('--no-labels-as-folders', action='store_false', dest='labels_as_folders',
+                        help="don't use first label as subdirectory")
+    parser.add_argument('--no-tag-pinned', action='store_false', dest='tag_pinned',
+                        help="don't add a #pinned tag for pinned notes")
     args = parser.parse_args()
 
     files = iter_filenames(args.infile)
