@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import tarfile
 import zipfile
@@ -59,6 +60,8 @@ class ObsidianNote:
     metadata: dict
     tags: list[str]
     content: str
+    ctime_us: int
+    mtime_us: int
 
 
 def _rename_fields(d, mapping):
@@ -172,6 +175,8 @@ def keepnote_to_obsidian(
         metadata=metadata,
         tags=tags,
         content=content,
+        ctime_us=n.ctime_us,
+        mtime_us=n.mtime_us,
     )
 
 
@@ -263,6 +268,8 @@ if __name__ == '__main__':
                         help="don't use first label as subdirectory")
     parser.add_argument('--no-tag-pinned', action='store_false', dest='tag_pinned',
                         help="don't add a #pinned tag for pinned notes")
+    parser.add_argument('--no-mtime', action='store_false', dest='mtime',
+                        help="don't set mtime on converted notes")
     args = parser.parse_args()
 
     files = iter_filenames(args.infile)
@@ -283,13 +290,16 @@ if __name__ == '__main__':
                 continue
             if args.attachments and n.attachments:
                 attachments_to_copy.extend(list_attachments(fname, n, **vars(args)))
-            o_note = keepnote_to_obsidian(n, **vars(args))
-            yield obsidiannote_to_markdown(o_note, **vars(args))
+            yield keepnote_to_obsidian(n, **vars(args))
 
-    for path, contents in iter_notes():
+    for note in iter_notes():
+        path, contents = obsidiannote_to_markdown(note, **vars(args))
         f = args.destdir / path  # type: Path
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_bytes(contents)
+        if args.mtime:
+            mtime_ns = 1000*note.mtime_us
+            os.utime(f, ns=(mtime_ns, mtime_ns))
 
     for src, target in attachments_to_copy:
         dest = args.destdir / target
