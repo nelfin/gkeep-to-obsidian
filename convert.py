@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import tarfile
 import zipfile
 from dataclasses import dataclass
@@ -106,6 +107,24 @@ def serialise_annotations(annotations) -> str:
     return content
 
 
+def serialise_attachments(attachment_dir: Path, attachments: list[dict]) -> str:
+    lines = []
+    for spec in attachments:
+        try:
+            path = Path(attachment_dir) / spec['filePath']
+            lines.append(f'![[{path}]]')
+        except (TypeError, KeyError):
+            continue
+    return '\n' + '\n'.join(lines)
+
+
+def list_attachments(fnote: Path, n: KeepNote, attachment_dir=None, **kwargs) -> Iterator[tuple[Path, Path]]:
+    srcdir = fnote.parent
+    destdir = Path(attachment_dir)
+    for spec in n.attachments:
+        yield srcdir / spec['filePath'], destdir / spec['filePath']
+
+
 def keepnote_to_obsidian(
     n: KeepNote,
     labels_as_folders=True,
@@ -114,6 +133,8 @@ def keepnote_to_obsidian(
     archive_dir=None,
     trashed_dir=None,
     annotations=False,
+    attachments=True,
+    attachment_dir=None,
     **kwargs
 ) -> ObsidianNote:
     assert isinstance(n, (ListNote, TextNote))  # FIXME: remove?
@@ -142,6 +163,8 @@ def keepnote_to_obsidian(
         content = '\n'.join(lines)
     else:  # isinstance(n, TextNote):
         content = n.text_content
+    if attachments and n.attachments:
+        content += serialise_attachments(attachment_dir, n.attachments)
     if annotations and n.annotations:
         content += serialise_annotations(n.annotations)
     return ObsidianNote(
@@ -220,6 +243,12 @@ if __name__ == '__main__':
                         help='destination directory for converted files [default=out]')
     parser.add_argument('--annotations', action='store_true',
                         help='add link preview annotations included in notes')
+    parser.add_argument('--no-attachments', action='store_false', dest='attachments',
+                        help="don't embed attachments")
+    # Initially planned to make default ".attachments" to avoid cluttering file list but embed
+    # paths with leading dots don't appear to be supported as of 0.13.x
+    parser.add_argument('--attachment-dir', dest='attachment_dir', default='Attachments', metavar='DIR',
+                        help='subdirectory for embedded attachments')
     parser.add_argument('--archived', action='store_true', help='convert archived notes')
     parser.add_argument('--archive-dir', dest='archive_dir', default='Archived', metavar='DIR',
                         help='subdirectory for archived notes')
@@ -241,6 +270,7 @@ if __name__ == '__main__':
         parser.error(f'unable to open {args.infile} for processing')
         # FIXME: optional? instead just raise?
 
+    attachments_to_copy = []  # type: list[tuple[Path, Path]]
     def iter_notes():
         for fname in files:
             with open(fname, 'r') as f:
@@ -251,6 +281,8 @@ if __name__ == '__main__':
                 continue
             if n.trashed and not args.trashed:
                 continue
+            if args.attachments and n.attachments:
+                attachments_to_copy.extend(list_attachments(fname, n, **vars(args)))
             o_note = keepnote_to_obsidian(n, **vars(args))
             yield obsidiannote_to_markdown(o_note, **vars(args))
 
@@ -258,3 +290,10 @@ if __name__ == '__main__':
         f = args.destdir / path  # type: Path
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_bytes(contents)
+
+    for src, target in attachments_to_copy:
+        dest = args.destdir / target
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if src.suffix == '.jpeg':  # mismatch between archive and JSON blob
+            src = src.with_suffix('.jpg')
+        shutil.copy(src, dest)
