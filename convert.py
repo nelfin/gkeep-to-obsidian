@@ -9,6 +9,7 @@ import shutil
 import tarfile
 import zipfile
 from dataclasses import dataclass
+from datetime import datetime
 from os import PathLike
 from pathlib import Path
 from typing import Optional, Union, Iterator
@@ -102,6 +103,21 @@ def title_to_slug(s: str) -> str:
     return s.replace('/', '_')
 
 
+def truncate(title: str, max_len: int = 10) -> str:
+    if len(title) > max_len:
+        return title[:max_len] + '...'
+    else:
+        return title
+
+
+def make_title(n: KeepNote, fmt: str) -> str:
+    fmt = fmt.replace('%@', '%Y-%m-%dT%H:%M:%S')  # non-standard ISO8601 seconds formatchar
+    fmt = fmt.replace('%#', '[SUMMARY]')
+    note_dt = datetime.fromtimestamp(n.ctime_us/1.0e6)
+    title = note_dt.strftime(fmt)
+    return title.replace('[SUMMARY]', truncate(n.text()))
+
+
 def keepnote_metadata(note: KeepNote) -> dict:
     return {
         'x-keep-color': note.color,
@@ -148,14 +164,15 @@ def keepnote_to_obsidian(
     annotations=False,
     attachments=True,
     attachment_dir=None,
+    untitled_format=None,
     **kwargs
 ) -> ObsidianNote:
     assert isinstance(n, (ListNote, TextNote))  # FIXME: remove?
     if not n.title:
-        slug = n.ctime_us
+        title = make_title(n, untitled_format)
     else:
-        slug = title_to_slug(n.title)
-    path = Path(f'{slug}.md')
+        title = n.title
+    path = Path(f'{title_to_slug(title)}.md')
     if labels_as_folders and n.labels:
         path = n.labels[0] / path
     if n.archived and archive_dir:
@@ -273,6 +290,10 @@ if __name__ == '__main__':
                         help="don't add a #pinned tag for pinned notes")
     parser.add_argument('--no-mtime', action='store_false', dest='mtime',
                         help="don't set mtime on converted notes")
+    parser.add_argument('--untitled-fmt', dest='untitled_format', default='%@ %#',
+                        help="format string for filenames of untitled notes (with non-standard "
+                             "specifiers %@ for ISO8601 timestamps and %# for note summaries, see "
+                             "datetime.strftime() for additional format chars) [default=%@ %#]")
     args = parser.parse_args()
 
     files = iter_filenames(args.infile)
