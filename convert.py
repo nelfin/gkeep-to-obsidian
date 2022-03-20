@@ -42,6 +42,13 @@ class ListNote(Note):
     annotations: Optional[list] = None
     attachments: Optional[list] = None
 
+    def text(self):
+        lines = []
+        for item in self.list_content:
+            check = 'x' if item['isChecked'] else ' '
+            lines.append(f'- [{check}] {item["text"]}')
+        return '\n'.join(lines)
+
 
 @dataclass
 class TextNote(Note):
@@ -49,6 +56,9 @@ class TextNote(Note):
     labels: Optional[list] = None
     annotations: Optional[list] = None
     attachments: Optional[list] = None
+
+    def text(self):
+        return self.text_content
 
 
 KeepNote = Union[ListNote, TextNote]
@@ -158,14 +168,7 @@ def keepnote_to_obsidian(
         tags.extend(n.labels)
     if tag_pinned and n.pinned:
         tags.append('pinned')
-    if isinstance(n, ListNote):
-        lines = []
-        for item in n.list_content:
-            check = 'x' if item['isChecked'] else ' '
-            lines.append(f'- [{check}] {item["text"]}')
-        content = '\n'.join(lines)
-    else:  # isinstance(n, TextNote):
-        content = n.text_content
+    content = n.text()
     if attachments and n.attachments:
         content += serialise_attachments(attachment_dir, n.attachments)
     if annotations and n.annotations:
